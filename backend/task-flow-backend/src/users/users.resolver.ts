@@ -1,21 +1,30 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
-import { User } from '../auth/auth.model';
-import { PrismaService } from '../common/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from '../entities/user.entity';
+import { TeamMember } from '../entities/team-member.entity';
+import { Team } from '../entities/team.entity';
+import { User as UserModel } from '../auth/auth.model';
 
-@Resolver(() => User)
+@Resolver(() => UserModel)
 export class UserResolver {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    @InjectRepository(TeamMember)
+    private teamMemberRepository: Repository<TeamMember>,
+    @InjectRepository(Team)
+    private teamRepository: Repository<Team>,
+  ) {}
 
-  @Query(() => [User])
-  async users(): Promise<User[]> {
-    const users = await this.prisma.user.findMany({
-      include: {
-        teams: {
-          include: {
-            team: true
-          }
+  @Query(() => [UserModel])
+  async users(): Promise<UserModel[]> {
+    const users = await this.userRepository.find({
+      relations: {
+        teamMembers: {
+          team: true
         },
-        tasks: true,
+        assignedTasks: true,
         comments: true
       }
     });
@@ -28,17 +37,15 @@ export class UserResolver {
     }));
   }
 
-  @Query(() => User)
-  async user(@Args('id') id: string): Promise<User> {
-    const user = await this.prisma.user.findUnique({
+  @Query(() => UserModel)
+  async user(@Args('id') id: string): Promise<UserModel> {
+    const user = await this.userRepository.findOne({
       where: { id },
-      include: {
-        teams: {
-          include: {
-            team: true
-          }
+      relations: {
+        teamMembers: {
+          team: true
         },
-        tasks: true,
+        assignedTasks: true,
         comments: true
       }
     });
@@ -55,10 +62,10 @@ export class UserResolver {
     };
   }
 
-  @Mutation(() => User)
-  async addToTeam(@Args('userId') userId: string, @Args('teamId') teamId: string): Promise<User> {
+  @Mutation(() => UserModel)
+  async addToTeam(@Args('userId') userId: string, @Args('teamId') teamId: string): Promise<UserModel> {
     // Verify user exists
-    const user = await this.prisma.user.findUnique({
+    const user = await this.userRepository.findOne({
       where: { id: userId }
     });
 
@@ -67,7 +74,7 @@ export class UserResolver {
     }
 
     // Verify team exists
-    const team = await this.prisma.team.findUnique({
+    const team = await this.teamRepository.findOne({
       where: { id: teamId }
     });
 
@@ -76,7 +83,7 @@ export class UserResolver {
     }
 
     // Check if user is already in team
-    const existingMember = await this.prisma.teamMember.findFirst({
+    const existingMember = await this.teamMemberRepository.findOne({
       where: { userId, teamId }
     });
 
@@ -84,23 +91,21 @@ export class UserResolver {
       throw new Error('User is already a member of this team');
     }
 
-    await this.prisma.teamMember.create({
-      data: {
-        userId,
-        teamId
-      }
+    const teamMember = this.teamMemberRepository.create({
+      userId,
+      teamId
     });
 
+    await this.teamMemberRepository.save(teamMember);
+
     // Return updated user
-    const updatedUser = await this.prisma.user.findUnique({
+    const updatedUser = await this.userRepository.findOne({
       where: { id: userId },
-      include: {
-        teams: {
-          include: {
-            team: true
-          }
+      relations: {
+        teamMembers: {
+          team: true
         },
-        tasks: true,
+        assignedTasks: true,
         comments: true
       }
     });

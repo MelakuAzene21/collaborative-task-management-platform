@@ -1,15 +1,26 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
-import { Project, CreateProjectInput } from './projects.model';
-import { PrismaService } from '../common/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Project } from '../entities/project.entity';
+import { Team } from '../entities/team.entity';
+import { Task } from '../entities/task.entity';
+import { Project as ProjectModel, CreateProjectInput } from './projects.model';
 
-@Resolver(() => Project)
+@Resolver(() => ProjectModel)
 export class ProjectResolver {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(Project)
+    private projectRepository: Repository<Project>,
+    @InjectRepository(Team)
+    private teamRepository: Repository<Team>,
+    @InjectRepository(Task)
+    private taskRepository: Repository<Task>,
+  ) {}
 
-  @Query(() => [Project])
-  async projects(): Promise<Project[]> {
-    const projects = await this.prisma.project.findMany({
-      include: {
+  @Query(() => [ProjectModel])
+  async projects(): Promise<ProjectModel[]> {
+    const projects = await this.projectRepository.find({
+      relations: {
         team: true,
         tasks: true
       }
@@ -33,11 +44,11 @@ export class ProjectResolver {
     }));
   }
 
-  @Query(() => Project)
-  async project(@Args('id') id: string): Promise<Project> {
-    const project = await this.prisma.project.findUnique({
+  @Query(() => ProjectModel)
+  async project(@Args('id') id: string): Promise<ProjectModel> {
+    const project = await this.projectRepository.findOne({
       where: { id },
-      include: {
+      relations: {
         team: true,
         tasks: true
       }
@@ -65,10 +76,10 @@ export class ProjectResolver {
     };
   }
 
-  @Mutation(() => Project)
-  async createProject(@Args('input') input: CreateProjectInput): Promise<Project> {
+  @Mutation(() => ProjectModel)
+  async createProject(@Args('input') input: CreateProjectInput): Promise<ProjectModel> {
     // Verify team exists
-    const team = await this.prisma.team.findUnique({
+    const team = await this.teamRepository.findOne({
       where: { id: input.teamId }
     });
 
@@ -76,22 +87,21 @@ export class ProjectResolver {
       throw new Error('Team not found');
     }
 
-    const project = await this.prisma.project.create({
-      data: {
-        name: input.name,
-        teamId: input.teamId
-      },
-      include: {
-        team: true,
-        tasks: true
-      }
+    const project = this.projectRepository.create({
+      name: input.name,
+      teamId: input.teamId
     });
 
+    const savedProject = await this.projectRepository.save(project);
+
     return {
-      id: project.id,
-      name: project.name,
-      teamId: project.teamId,
-      team: project.team,
+      id: savedProject.id,
+      name: savedProject.name,
+      teamId: savedProject.teamId,
+      team: {
+        id: team.id,
+        name: team.name
+      },
       tasks: []
     };
   }

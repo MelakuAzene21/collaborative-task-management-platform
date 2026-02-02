@@ -1,19 +1,29 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
-import { Team, CreateTeamInput } from './teams.model';
-import { PrismaService } from '../common/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Team } from '../entities/team.entity';
+import { TeamMember } from '../entities/team-member.entity';
+import { User } from '../entities/user.entity';
+import { Project } from '../entities/project.entity';
+import { Team as TeamModel, CreateTeamInput } from './teams.model';
 
-@Resolver(() => Team)
+@Resolver(() => TeamModel)
 export class TeamResolver {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(Team)
+    private teamRepository: Repository<Team>,
+    @InjectRepository(TeamMember)
+    private teamMemberRepository: Repository<TeamMember>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+  ) {}
 
-  @Query(() => [Team])
-  async teams(): Promise<Team[]> {
-    const teams = await this.prisma.team.findMany({
-      include: {
+  @Query(() => [TeamModel])
+  async teams(): Promise<TeamModel[]> {
+    const teams = await this.teamRepository.find({
+      relations: {
         members: {
-          include: {
-            user: true
-          }
+          user: true
         },
         projects: true
       }
@@ -31,19 +41,21 @@ export class TeamResolver {
           role: member.user.role as any // Cast enum
         }
       })),
-      projects: team.projects
+      projects: team.projects.map(project => ({
+        id: project.id,
+        name: project.name,
+        teamId: project.teamId
+      }))
     }));
   }
 
-  @Query(() => Team)
-  async team(@Args('id') id: string): Promise<Team> {
-    const team = await this.prisma.team.findUnique({
+  @Query(() => TeamModel)
+  async team(@Args('id') id: string): Promise<TeamModel> {
+    const team = await this.teamRepository.findOne({
       where: { id },
-      include: {
+      relations: {
         members: {
-          include: {
-            user: true
-          }
+          user: true
         },
         projects: true
       }
@@ -65,21 +77,21 @@ export class TeamResolver {
           role: member.user.role as any // Cast enum
         }
       })),
-      projects: team.projects
+      projects: team.projects.map(project => ({
+        id: project.id,
+        name: project.name,
+        teamId: project.teamId
+      }))
     };
   }
 
-  @Mutation(() => Team)
-  async createTeam(@Args('input') input: CreateTeamInput): Promise<Team> {
-    const team = await this.prisma.team.create({
-      data: {
-        name: input.name
-      },
-      include: {
-        members: true,
-        projects: true
-      }
+  @Mutation(() => TeamModel)
+  async createTeam(@Args('input') input: CreateTeamInput): Promise<TeamModel> {
+    const team = this.teamRepository.create({
+      name: input.name
     });
+
+    const savedTeam = await this.teamRepository.save(team);
 
     return {
       id: team.id,
