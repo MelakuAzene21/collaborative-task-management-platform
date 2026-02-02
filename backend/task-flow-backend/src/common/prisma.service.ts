@@ -1,11 +1,15 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
   constructor() {
     super({
-      // Prisma 7.x requires explicit configuration
+      // Prisma 7.x requires adapter for PostgreSQL
+      adapter: new PrismaPg({
+        connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/task_management',
+      }),
       log: ['query', 'info', 'warn', 'error'],
     });
   }
