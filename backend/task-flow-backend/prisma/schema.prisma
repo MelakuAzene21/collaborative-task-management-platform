@@ -1,6 +1,5 @@
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -8,14 +7,17 @@ generator client {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      Role     @default(MEMBER)
-  teams     TeamMember[]
-  tasks     Task[]   @relation("AssignedTasks")
-  createdAt DateTime @default(now())
+  id             String    @id @default(uuid())
+  email          String    @unique
+  password       String
+  name           String
+  role           Role      @default(MEMBER)
+  resetToken     String?
+  resetTokenExpiry DateTime?
+  teams          TeamMember[]
+  tasks          Task[]    @relation("AssignedTasks")
+  comments       Comment[]
+  createdAt      DateTime  @default(now())
 }
 
 model Team {

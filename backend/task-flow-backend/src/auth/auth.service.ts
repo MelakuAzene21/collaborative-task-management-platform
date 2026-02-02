@@ -12,7 +12,7 @@ export class AuthService {
   ) {}
 
   async login(email: string, password: string) {
-    const user = await this.prisma.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email }
     });
     
@@ -25,13 +25,13 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role as Role
       }
     };
   }
 
   async register(email: string, password: string, name: string) {
-    const existingUser = await this.prisma.findUnique({
+    const existingUser = await this.prisma.user.findUnique({
       where: { email }
     });
 
@@ -41,7 +41,7 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    const user = await this.prisma.create({
+    const user = await this.prisma.user.create({
       data: {
         email,
         password: hashedPassword,
@@ -56,13 +56,13 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role as Role
       }
     };
   }
 
   async resetPassword(email: string) {
-    const user = await this.prisma.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email }
     });
 
@@ -74,7 +74,7 @@ export class AuthService {
     const resetToken = Math.random().toString(36).substring(2, 15);
     const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
 
-    await this.prisma.update({
+    await this.prisma.user.update({
       where: { id: user.id },
       data: {
         resetToken,
@@ -87,7 +87,7 @@ export class AuthService {
   }
 
   async confirmPasswordReset(token: string, newPassword: string) {
-    const user = await this.prisma.findUnique({
+    const user = await this.prisma.user.findFirst({
       where: {
         resetToken: token,
         resetTokenExpiry: {
@@ -102,12 +102,12 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    await this.prisma.update({
+    await this.prisma.user.update({
       where: { id: user.id },
       data: {
         password: hashedPassword,
-        resetToken: null,
-        resetTokenExpiry: null
+        resetToken: undefined,
+        resetTokenExpiry: undefined
       }
     });
 

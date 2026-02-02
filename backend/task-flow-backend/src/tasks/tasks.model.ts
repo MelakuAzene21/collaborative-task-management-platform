@@ -1,5 +1,6 @@
 import { Field, InputType, Int, ObjectType } from '@nestjs/graphql';
 import { TaskStatus, Priority } from '../common/types';
+import '../common/enums.graphql'; // Register enums with GraphQL
 
 @ObjectType()
 export class Task {

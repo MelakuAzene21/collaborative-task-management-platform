@@ -1,14 +1,6 @@
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { Role } from '../common/types';
-
-@ObjectType()
-export class LoginResponse {
-  @Field(() => String)
-  token: string;
-
-  @Field(() => User)
-  user: User;
-}
+import '../common/enums.graphql'; // Register enums with GraphQL
 
 @ObjectType()
 export class User {
@@ -23,6 +15,15 @@ export class User {
 
   @Field(() => Role)
   role: Role;
+}
+
+@ObjectType()
+export class LoginResponse {
+  @Field(() => String)
+  token: string;
+
+  @Field(() => User)
+  user: User;
 }
 
 @InputType()
