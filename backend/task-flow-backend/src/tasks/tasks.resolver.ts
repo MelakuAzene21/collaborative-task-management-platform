@@ -104,7 +104,7 @@ export class TaskResolver {
     if (input.status !== undefined) task.status = input.status;
     if (input.priority !== undefined) task.priority = input.priority;
     if (input.dueDate !== undefined) {
-      task.dueDate = input.dueDate ? new Date(input.dueDate) : null;
+      task.dueDate = input.dueDate ? new Date(input.dueDate) : undefined;
     }
     if (input.assigneeId !== undefined) task.assigneeId = input.assigneeId;
     if (input.projectId !== undefined) task.projectId = input.projectId;

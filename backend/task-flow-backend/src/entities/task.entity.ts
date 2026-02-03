@@ -23,8 +23,8 @@ export class Task {
   @Column()
   title: string;
 
-  @Column({ nullable: true })
-  description: string;
+  @Column({ nullable: true, type: 'text' })
+  description: string | undefined;
 
   @Column({
     type: 'enum',
@@ -40,11 +40,11 @@ export class Task {
   })
   priority: Priority;
 
-  @Column({ nullable: true })
-  dueDate: Date;
+  @Column({ nullable: true, type: 'timestamp' })
+  dueDate: Date | undefined;
 
   @Column({ nullable: true })
-  assigneeId: string;
+  assigneeId: string | undefined;
 
   @Column()
   projectId: string;
