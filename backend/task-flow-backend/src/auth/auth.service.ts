@@ -1,8 +1,9 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, Role } from '../entities/user.entity';
+import { UpdateProfileInput, ChangePasswordInput, InviteUserInput } from './auth.model';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -103,5 +104,92 @@ export class AuthService {
     });
 
     return { message: 'Password reset successful' };
+  }
+
+  async updateProfile(userId: string, input: UpdateProfileInput) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Check if email is being changed and if it's already taken
+    if (input.email !== user.email) {
+      const existingUser = await this.userRepository.findOne({ where: { email: input.email } });
+      if (existingUser) {
+        throw new ConflictException('Email already exists');
+      }
+    }
+
+    await this.userRepository.update(userId, {
+      name: input.name,
+      email: input.email,
+    });
+
+    return {
+      id: user.id,
+      email: input.email,
+      name: input.name,
+      role: user.role
+    };
+  }
+
+  async changePassword(userId: string, input: ChangePasswordInput) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!(await bcrypt.compare(input.currentPassword, user.password))) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const hashedPassword = await bcrypt.hash(input.newPassword, 10);
+    
+    await this.userRepository.update(userId, {
+      password: hashedPassword,
+    });
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role
+    };
+  }
+
+  async inviteUser(input: InviteUserInput) {
+    // Check if user already exists
+    let user = await this.userRepository.findOne({ where: { email: input.email } });
+
+    if (!user) {
+      // Create new user with temporary password
+      const tempPassword = Math.random().toString(36).substring(2, 15);
+      const hashedPassword = await bcrypt.hash(tempPassword, 10);
+      
+      user = this.userRepository.create({
+        email: input.email,
+        password: hashedPassword,
+        name: input.email.split('@')[0], // Default name from email
+        role: input.role || Role.MEMBER,
+      });
+
+      user = await this.userRepository.save(user);
+      
+      // TODO: Send invitation email with temporary password
+    }
+
+    // TODO: Add user to team if teamId is provided
+    if (input.teamId) {
+      // Implementation would depend on your team membership structure
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role
+    };
   }
 }

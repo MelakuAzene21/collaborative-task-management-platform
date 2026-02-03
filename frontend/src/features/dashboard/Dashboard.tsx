@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GET_PROJECTS, GET_TASKS } from '../../api/queries';
 import { Loading, ErrorDisplay } from '../../common/Loading';
+import { useAuth } from '../../hooks';
 import { 
   FolderIcon,
   CheckCircleIcon,
@@ -13,6 +14,7 @@ import {
 import { formatDate, getStatusColor, getPriorityColor } from '../../utils/helpers';
 
 const Dashboard: React.FC = () => {
+  const { user } = useAuth();
   const { data: projectsData, loading: projectsLoading, error: projectsError } = useQuery(GET_PROJECTS);
   const { data: tasksData, loading: tasksLoading, error: tasksError } = useQuery(GET_TASKS, {
     variables: { projectId: 'all' }, // This would need to be adjusted based on your API
@@ -43,7 +45,7 @@ const Dashboard: React.FC = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">Welcome back! Here's what's happening with your projects.</p>
+        <p className="text-gray-600">Welcome back, {user?.name}! Here's what's happening with your projects.</p>
       </div>
 
       {/* Stats Grid */}

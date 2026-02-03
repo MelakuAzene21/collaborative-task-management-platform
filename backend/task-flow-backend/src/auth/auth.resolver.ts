@@ -1,6 +1,14 @@
 import { Resolver, Mutation, Args, Context } from '@nestjs/graphql';
 import { AuthService } from './auth.service';
-import { LoginInput, LoginResponse, RegisterInput } from './auth.model';
+import { 
+  LoginInput, 
+  LoginResponse, 
+  RegisterInput, 
+  UpdateProfileInput, 
+  ChangePasswordInput, 
+  InviteUserInput,
+  User
+} from './auth.model';
 import { Response } from 'express';
 
 @Resolver()
@@ -41,6 +49,21 @@ export class AuthResolver {
   async logout(@Context() context: { res: Response }) {
     context.res.clearCookie('token');
     return 'Logged out successfully';
+  }
+
+  @Mutation(() => User)
+  async updateProfile(@Args('input') input: UpdateProfileInput, @Context() context: { req: any }) {
+    return this.authService.updateProfile(context.req.user.id, input);
+  }
+
+  @Mutation(() => User)
+  async changePassword(@Args('input') input: ChangePasswordInput, @Context() context: { req: any }) {
+    return this.authService.changePassword(context.req.user.id, input);
+  }
+
+  @Mutation(() => User)
+  async inviteUser(@Args('input') input: InviteUserInput) {
+    return this.authService.inviteUser(input);
   }
 
   @Mutation(() => String)

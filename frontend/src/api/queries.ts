@@ -34,6 +34,37 @@ export const LOGOUT_MUTATION = gql`
   }
 `;
 
+export const UPDATE_PROFILE_MUTATION = gql`
+  mutation UpdateProfile($input: UpdateProfileInput!) {
+    updateProfile(input: $input) {
+      id
+      email
+      name
+      role
+    }
+  }
+`;
+
+export const CHANGE_PASSWORD_MUTATION = gql`
+  mutation ChangePassword($input: ChangePasswordInput!) {
+    changePassword(input: $input) {
+      id
+      email
+    }
+  }
+`;
+
+export const INVITE_USER_MUTATION = gql`
+  mutation InviteUser($input: InviteUserInput!) {
+    inviteUser(input: $input) {
+      id
+      email
+      name
+      role
+    }
+  }
+`;
+
 export const GET_CURRENT_USER = gql`
   query GetCurrentUser {
     me {

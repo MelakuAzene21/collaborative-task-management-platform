@@ -7,8 +7,8 @@ import {
   CalendarIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
-  Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  UserIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../hooks';
 
@@ -25,6 +25,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
     { name: 'Dashboard', href: '/', icon: HomeIcon },
     { name: 'Projects', href: '/projects', icon: FolderIcon },
     { name: 'Teams', href: '/teams', icon: UsersIcon },
+    { name: 'Team Management', href: '/team-management', icon: UsersIcon },
+    { name: 'Profile', href: '/profile', icon: UserIcon },
     { name: 'Calendar', href: '/calendar', icon: CalendarIcon },
     { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
   ];

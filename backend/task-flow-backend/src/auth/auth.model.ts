@@ -46,3 +46,33 @@ export class RegisterInput {
   @Field(() => String)
   name: string;
 }
+
+@InputType()
+export class UpdateProfileInput {
+  @Field(() => String)
+  name: string;
+
+  @Field(() => String)
+  email: string;
+}
+
+@InputType()
+export class ChangePasswordInput {
+  @Field(() => String)
+  currentPassword: string;
+
+  @Field(() => String)
+  newPassword: string;
+}
+
+@InputType()
+export class InviteUserInput {
+  @Field(() => String)
+  email: string;
+
+  @Field(() => String)
+  teamId: string;
+
+  @Field(() => Role, { nullable: true })
+  role?: Role;
+}
