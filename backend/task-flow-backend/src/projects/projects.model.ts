@@ -18,6 +18,12 @@ export class Project {
   @Field(() => String)
   name: string;
 
+  @Field(() => String, { nullable: true })
+  description?: string;
+
+  @Field(() => String, { nullable: true })
+  dueDate?: string;
+
   @Field(() => ID)
   teamId: string;
 
@@ -33,6 +39,12 @@ export class CreateProjectInput {
   @Field(() => String)
   name: string;
 
+  @Field(() => String, { nullable: true })
+  description?: string;
+
   @Field(() => ID)
   teamId: string;
+
+  @Field(() => String, { nullable: true })
+  dueDate?: string;
 }

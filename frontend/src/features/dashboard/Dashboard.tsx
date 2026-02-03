@@ -21,6 +21,13 @@ const Dashboard: React.FC = () => {
     skip: !projectsData?.projects?.[0]?.id,
   });
 
+  // Role-based permissions
+  const isAdmin = user?.role === 'ADMIN';
+  const isLead = user?.role === 'LEAD';
+  const isMember = user?.role === 'MEMBER';
+  const canManageProjects = isAdmin || isLead;
+  const canManageTasks = isAdmin || isLead;
+
   if (projectsLoading || tasksLoading) return <Loading message="Loading dashboard..." />;
   if (projectsError || tasksError) return <ErrorDisplay message={projectsError?.message || tasksError?.message || 'Failed to load dashboard'} />;
 
@@ -45,7 +52,21 @@ const Dashboard: React.FC = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">Welcome back, {user?.name}! Here's what's happening with your projects.</p>
+        <p className="text-gray-600">
+          Welcome back, {user?.name}! Here's what's happening with your {isMember ? 'assigned' : 'projects'}.
+        </p>
+        <div className="mt-2 flex items-center space-x-2">
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            isAdmin ? 'bg-purple-100 text-purple-800' : 
+            isLead ? 'bg-blue-100 text-blue-800' : 
+            'bg-gray-100 text-gray-800'
+          }`}>
+            {user?.role}
+          </span>
+          {canManageProjects && (
+            <span className="text-sm text-gray-500">• Manager</span>
+          )}
+        </div>
       </div>
 
       {/* Stats Grid */}

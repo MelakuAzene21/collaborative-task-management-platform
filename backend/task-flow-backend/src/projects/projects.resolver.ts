@@ -29,6 +29,8 @@ export class ProjectResolver {
     return projects.map(project => ({
       id: project.id,
       name: project.name,
+      description: project.description,
+      dueDate: project.dueDate ? new Date(project.dueDate).toISOString() : undefined,
       teamId: project.teamId,
       team: project.team,
       tasks: project.tasks.map(task => ({
@@ -37,7 +39,7 @@ export class ProjectResolver {
         description: task.description || undefined,
         status: task.status as any,
         priority: task.priority as any,
-        dueDate: task.dueDate?.toISOString(),
+        dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : undefined,
         assigneeId: task.assigneeId || undefined,
         projectId: task.projectId
       }))
@@ -61,6 +63,8 @@ export class ProjectResolver {
     return {
       id: project.id,
       name: project.name,
+      description: project.description,
+      dueDate: project.dueDate ? new Date(project.dueDate).toISOString() : undefined,
       teamId: project.teamId,
       team: project.team,
       tasks: project.tasks.map(task => ({
@@ -69,7 +73,7 @@ export class ProjectResolver {
         description: task.description || undefined,
         status: task.status as any,
         priority: task.priority as any,
-        dueDate: task.dueDate?.toISOString(),
+        dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : undefined,
         assigneeId: task.assigneeId || undefined,
         projectId: task.projectId
       }))
@@ -89,7 +93,9 @@ export class ProjectResolver {
 
     const project = this.projectRepository.create({
       name: input.name,
-      teamId: input.teamId
+      description: input.description,
+      teamId: input.teamId,
+      dueDate: input.dueDate ? new Date(input.dueDate) : undefined
     });
 
     const savedProject = await this.projectRepository.save(project);
@@ -97,6 +103,8 @@ export class ProjectResolver {
     return {
       id: savedProject.id,
       name: savedProject.name,
+      description: savedProject.description,
+      dueDate: savedProject.dueDate ? savedProject.dueDate.toISOString() : undefined,
       teamId: savedProject.teamId,
       team: {
         id: team.id,

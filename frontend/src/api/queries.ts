@@ -92,6 +92,7 @@ export const GET_TEAMS = gql`
     teams {
       id
       name
+      description
       members {
         id
         userId
@@ -142,6 +143,7 @@ export const CREATE_TEAM = gql`
     createTeam(input: $input) {
       id
       name
+      description
       members {
         id
         userId

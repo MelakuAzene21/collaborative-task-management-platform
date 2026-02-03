@@ -10,6 +10,12 @@ export class Project {
   @Column()
   name: string;
 
+  @Column({ nullable: true })
+  description?: string;
+
+  @Column({ type: 'date', nullable: true })
+  dueDate?: Date;
+
   @Column()
   teamId: string;
 

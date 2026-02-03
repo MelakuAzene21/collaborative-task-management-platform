@@ -36,6 +36,9 @@ export class Team {
   @Field(() => String)
   name: string;
 
+  @Field(() => String, { nullable: true })
+  description?: string;
+
   @Field(() => [TeamMember])
   members: TeamMember[];
 
@@ -47,4 +50,7 @@ export class Team {
 export class CreateTeamInput {
   @Field(() => String)
   name: string;
+
+  @Field(() => String, { nullable: true })
+  description?: string;
 }

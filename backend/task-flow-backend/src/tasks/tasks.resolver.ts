@@ -19,8 +19,11 @@ export class TaskResolver {
 
   @Query(() => [TaskModel])
   async tasks(@Args('projectId') projectId: string): Promise<TaskModel[]> {
+    // If projectId is 'all', return all tasks, otherwise filter by project
+    const whereCondition = projectId === 'all' ? {} : { projectId };
+    
     const tasks = await this.taskRepository.find({
-      where: { projectId },
+      where: whereCondition,
       relations: ['assignee', 'project']
     });
     
@@ -30,7 +33,7 @@ export class TaskResolver {
       description: task.description || undefined,
       status: task.status as any,
       priority: task.priority as any,
-      dueDate: task.dueDate?.toISOString() || undefined,
+      dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : undefined,
       assigneeId: task.assigneeId || undefined,
       projectId: task.projectId
     }));
@@ -81,7 +84,7 @@ export class TaskResolver {
       description: savedTask.description || undefined,
       status: savedTask.status as any,
       priority: savedTask.priority as any,
-      dueDate: savedTask.dueDate?.toISOString() || undefined,
+      dueDate: savedTask.dueDate ? savedTask.dueDate.toISOString() : undefined,
       assigneeId: savedTask.assigneeId || undefined,
       projectId: savedTask.projectId
     };
