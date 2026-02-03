@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useState, useEffect, type RefObject } from 'react';
 import { type AppDispatch, type RootState } from '../store';
 import { useMutation } from '@apollo/client/react';
-import { LOGOUT_MUTATION } from '../api/queries';
+import { LOGOUT_MUTATION, GET_CURRENT_USER } from '../api/queries';
 
 export const useAppDispatch = () => useDispatch<AppDispatch>();
 export const useAppSelector = <T>(selector: (state: RootState) => T): T => {
@@ -16,6 +16,13 @@ const setCookie = (name: string, value: string, days: number = 7) => {
   document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
 };
 
+const setUserCookie = (user: any) => {
+  const userString = JSON.stringify(user);
+  const expires = new Date();
+  expires.setTime(expires.getTime() + 7 * 24 * 60 * 60 * 1000);
+  document.cookie = `user=${encodeURIComponent(userString)};expires=${expires.toUTCString()};path=/`;
+};
+
 export const getCookie = (name: string): string | null => {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
@@ -25,8 +32,28 @@ export const getCookie = (name: string): string | null => {
   return null;
 };
 
+export const getUserCookie = (): any | null => {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; user=`);
+  if (parts.length === 2) {
+    const userString = parts.pop()?.split(';').shift();
+    if (userString) {
+      try {
+        return JSON.parse(decodeURIComponent(userString));
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+};
+
 const deleteCookie = (name: string) => {
   document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:01 UTC;path=/`;
+};
+
+const deleteUserCookie = () => {
+  document.cookie = `user=;expires=Thu, 01 Jan 1970 00:00:01 UTC;path=/`;
 };
 
 export const useAuth = () => {
@@ -34,8 +61,23 @@ export const useAuth = () => {
   const auth = useAppSelector((state) => state.auth);
   const [logoutMutation] = useMutation(LOGOUT_MUTATION);
 
+  // Initialize auth state from cookies on component mount
+  useEffect(() => {
+    const token = getCookie('token');
+    const user = getUserCookie();
+    if (token && user && !auth.isAuthenticated) {
+      // Token and user exist but not authenticated in Redux
+      // This happens on page refresh - restore from cookies
+      dispatch({
+        type: 'auth/loginSuccess',
+        payload: { token, user },
+      });
+    }
+  }, [dispatch, auth.isAuthenticated]);
+
   const login = (token: string, user: any) => {
     setCookie('token', token);
+    setUserCookie(user);
     dispatch({
       type: 'auth/loginSuccess',
       payload: { token, user },
@@ -49,6 +91,7 @@ export const useAuth = () => {
       console.error('Logout mutation failed:', error);
     } finally {
       deleteCookie('token');
+      deleteUserCookie();
       dispatch({ type: 'auth/logout' });
     }
   };

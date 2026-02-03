@@ -228,6 +228,8 @@ export const CREATE_PROJECT = gql`
     createProject(input: $input) {
       id
       name
+      description
+      dueDate
       teamId
       team {
         id
@@ -243,6 +245,41 @@ export const CREATE_PROJECT = gql`
         assigneeId
         projectId
       }
+    }
+  }
+`;
+
+export const UPDATE_PROJECT = gql`
+  mutation UpdateProject($id: String!, $input: UpdateProjectInput!) {
+    updateProject(id: $id, input: $input) {
+      id
+      name
+      description
+      dueDate
+      teamId
+      team {
+        id
+        name
+      }
+      tasks {
+        id
+        title
+        description
+        status
+        priority
+        dueDate
+        assigneeId
+        projectId
+      }
+    }
+  }
+`;
+
+export const DELETE_PROJECT = gql`
+  mutation DeleteProject($id: String!) {
+    deleteProject(id: $id) {
+      id
+      name
     }
   }
 `;

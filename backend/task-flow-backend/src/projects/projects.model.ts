@@ -48,3 +48,15 @@ export class CreateProjectInput {
   @Field(() => String, { nullable: true })
   dueDate?: string;
 }
+
+@InputType()
+export class UpdateProjectInput {
+  @Field(() => String, { nullable: true })
+  name?: string;
+
+  @Field(() => String, { nullable: true })
+  description?: string;
+
+  @Field(() => String, { nullable: true })
+  dueDate?: string;
+}

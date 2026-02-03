@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Project } from '../entities/project.entity';
 import { Team } from '../entities/team.entity';
 import { Task } from '../entities/task.entity';
-import { Project as ProjectModel, CreateProjectInput } from './projects.model';
+import { Project as ProjectModel, CreateProjectInput, UpdateProjectInput } from './projects.model';
 
 @Resolver(() => ProjectModel)
 export class ProjectResolver {
@@ -110,6 +110,64 @@ export class ProjectResolver {
         id: team.id,
         name: team.name
       },
+      tasks: []
+    };
+  }
+
+  @Mutation(() => ProjectModel)
+  async updateProject(@Args('id') id: string, @Args('input') input: UpdateProjectInput): Promise<ProjectModel> {
+    const project = await this.projectRepository.findOne({
+      where: { id },
+      relations: ['team']
+    });
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    // Update fields
+    if (input.name) project.name = input.name;
+    if (input.description !== undefined) project.description = input.description;
+    if (input.dueDate) project.dueDate = new Date(input.dueDate);
+
+    const savedProject = await this.projectRepository.save(project);
+
+    return {
+      id: savedProject.id,
+      name: savedProject.name,
+      description: savedProject.description,
+      dueDate: savedProject.dueDate ? savedProject.dueDate.toISOString() : undefined,
+      teamId: savedProject.teamId,
+      team: savedProject.team ? {
+        id: savedProject.team.id,
+        name: savedProject.team.name
+      } : undefined,
+      tasks: []
+    };
+  }
+
+  @Mutation(() => ProjectModel)
+  async deleteProject(@Args('id') id: string): Promise<ProjectModel> {
+    const project = await this.projectRepository.findOne({
+      where: { id }
+    });
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    // Delete associated tasks first
+    await this.taskRepository.delete({ projectId: id });
+
+    // Delete the project
+    await this.projectRepository.remove(project);
+
+    return {
+      id: project.id,
+      name: project.name,
+      description: project.description,
+      dueDate: project.dueDate ? project.dueDate.toISOString() : undefined,
+      teamId: project.teamId,
       tasks: []
     };
   }

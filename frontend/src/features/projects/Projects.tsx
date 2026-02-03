@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
-import { GET_PROJECTS, CREATE_PROJECT, GET_TEAMS } from '../../api/queries';
+import { GET_PROJECTS, CREATE_PROJECT, UPDATE_PROJECT, DELETE_PROJECT, GET_TEAMS } from '../../api/queries';
 import { useAuth, useNotifications } from '../../hooks';
 import { 
   FolderIcon,
@@ -11,7 +11,8 @@ import {
   CalendarIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
-  ClockIcon
+  ClockIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import { formatDate, getStatusColor, getPriorityColor } from '../../utils/helpers';
 
@@ -27,6 +28,8 @@ const Projects: React.FC = () => {
   const { addNotification } = useNotifications();
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [editingProject, setEditingProject] = useState<any>(null);
+  const [deletingProject, setDeletingProject] = useState<any>(null);
+  const [managingProject, setManagingProject] = useState<any>(null);
   
   const [projectForm, setProjectForm] = useState<ProjectFormData>({
     name: '',
@@ -38,6 +41,8 @@ const Projects: React.FC = () => {
   const { data: projectsData, loading, refetch } = useQuery(GET_PROJECTS);
   const { data: teamsData } = useQuery(GET_TEAMS);
   const [createProjectMutation] = useMutation(CREATE_PROJECT);
+  const [updateProjectMutation] = useMutation(UPDATE_PROJECT);
+  const [deleteProjectMutation] = useMutation(DELETE_PROJECT);
 
   const projects = projectsData?.projects || [];
   const teams = teamsData?.teams || [];
@@ -64,6 +69,56 @@ const Projects: React.FC = () => {
     } catch (error) {
       addNotification('Failed to create project', 'error');
     }
+  };
+
+  const handleEditProject = (project: any) => {
+    setEditingProject(project);
+    setProjectForm({
+      name: project.name,
+      description: project.description || '',
+      teamId: project.teamId,
+      dueDate: project.dueDate ? new Date(project.dueDate).toISOString().split('T')[0] : '',
+    });
+  };
+
+  const handleUpdateProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      await updateProjectMutation({
+        variables: {
+          id: editingProject.id,
+          input: projectForm,
+        },
+      });
+      
+      addNotification('Project updated successfully!', 'success');
+      setEditingProject(null);
+      setProjectForm({ name: '', description: '', teamId: '', dueDate: '' });
+      refetch();
+    } catch (error) {
+      addNotification('Failed to update project', 'error');
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    try {
+      await deleteProjectMutation({
+        variables: { id: deletingProject.id },
+      });
+      
+      addNotification('Project deleted successfully!', 'success');
+      setDeletingProject(null);
+      refetch();
+    } catch (error) {
+      addNotification('Failed to delete project', 'error');
+    }
+  };
+
+  const handleManageTasks = (project: any) => {
+    setManagingProject(project);
+    // Navigate to tasks page with project filter
+    window.location.href = `/tasks?projectId=${project.id}`;
   };
 
   const canManageProject = (project: any) => {
@@ -195,9 +250,30 @@ const Projects: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Action Button */}
-                <div className="mt-4">
-                  <button className="w-full btn btn-secondary btn-sm">
+                {/* Action Buttons */}
+                <div className="mt-4 space-y-2">
+                  {canEdit && (
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleEditProject(project)}
+                        className="flex-1 btn btn-secondary btn-sm"
+                      >
+                        <PencilIcon className="h-4 w-4 mr-1" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => setDeletingProject(project)}
+                        className="flex-1 btn btn-danger btn-sm"
+                      >
+                        <TrashIcon className="h-4 w-4 mr-1" />
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => handleManageTasks(project)}
+                    className="w-full btn btn-primary btn-sm"
+                  >
                     {canEdit ? 'Manage Tasks' : 'View Details'}
                   </button>
                 </div>
@@ -321,6 +397,133 @@ const Projects: React.FC = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Project Modal */}
+      {editingProject && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" onClick={() => setEditingProject(null)}>
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <form onSubmit={handleUpdateProject}>
+                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="mb-4">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">Edit Project</h3>
+                    <p className="mt-1 text-sm text-gray-500">Update the project details.</p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="editProjectName" className="block text-sm font-medium text-gray-700">
+                        Project Name
+                      </label>
+                      <input
+                        id="editProjectName"
+                        type="text"
+                        className="mt-1 input"
+                        value={projectForm.name}
+                        onChange={(e) => setProjectForm(prev => ({ ...prev, name: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="editProjectDescription" className="block text-sm font-medium text-gray-700">
+                        Description
+                      </label>
+                      <textarea
+                        id="editProjectDescription"
+                        rows={3}
+                        className="mt-1 input"
+                        value={projectForm.description}
+                        onChange={(e) => setProjectForm(prev => ({ ...prev, description: e.target.value }))}
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="editProjectDueDate" className="block text-sm font-medium text-gray-700">
+                        Due Date (optional)
+                      </label>
+                      <input
+                        id="editProjectDueDate"
+                        type="date"
+                        className="mt-1 input"
+                        value={projectForm.dueDate}
+                        onChange={(e) => setProjectForm(prev => ({ ...prev, dueDate: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                  <button
+                    type="submit"
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  >
+                    Update Project
+                  </button>
+                  <button
+                    type="button"
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                    onClick={() => setEditingProject(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingProject && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" onClick={() => setDeletingProject(null)}>
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <TrashIcon className="h-6 w-6 text-red-600" />
+                  </div>
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                      Delete Project
+                    </h3>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500">
+                        Are you sure you want to delete "{deletingProject.name}"? This action cannot be undone and will also delete all tasks associated with this project.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={handleDeleteProject}
+                >
+                  Delete
+                </button>
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={() => setDeletingProject(null)}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>

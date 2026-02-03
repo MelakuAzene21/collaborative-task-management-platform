@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
 import { GET_TASKS, CREATE_TASK, GET_PROJECTS } from '../../api/queries';
 import { useAuth, useNotifications } from '../../hooks';
@@ -31,6 +31,16 @@ const Tasks: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [filterPriority, setFilterPriority] = useState<string>('ALL');
   
+  // Read projectId from URL parameters on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectId = urlParams.get('projectId');
+    if (projectId) {
+      setSelectedProject(projectId);
+      setTaskForm(prev => ({ ...prev, projectId }));
+    }
+  }, []);
+
   const [taskForm, setTaskForm] = useState<TaskFormData>({
     title: '',
     description: '',
@@ -42,7 +52,6 @@ const Tasks: React.FC = () => {
 
   const { data: tasksData, loading, refetch } = useQuery(GET_TASKS, {
     variables: { projectId: selectedProject || 'all' },
-    skip: !selectedProject,
   });
 
   const { data: projectsData } = useQuery(GET_PROJECTS);
@@ -146,7 +155,6 @@ const Tasks: React.FC = () => {
           <button
             onClick={() => setShowCreateTask(true)}
             className="btn btn-primary"
-            disabled={!selectedProject}
           >
             <PlusIcon className="h-5 w-5 mr-2" />
             Create Task
