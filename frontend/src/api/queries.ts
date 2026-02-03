@@ -295,6 +295,16 @@ export const GET_TASKS = gql`
       dueDate
       assigneeId
       projectId
+      assignee {
+        id
+        name
+        email
+        role
+      }
+      project {
+        id
+        name
+      }
     }
   }
 `;

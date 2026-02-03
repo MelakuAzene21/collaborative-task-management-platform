@@ -324,7 +324,12 @@ const Tasks: React.FC = () => {
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
                             {task.priority}
                           </span>
-                          {task.assigneeId ? (
+                          {isMine ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              <UserIcon className="h-3 w-3 mr-1" />
+                              Assigned to you
+                            </span>
+                          ) : task.assigneeId ? (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                               <UserIcon className="h-3 w-3 mr-1" />
                               Assigned to {task.assignee?.name || 'Unknown'}
@@ -335,11 +340,6 @@ const Tasks: React.FC = () => {
                               Unassigned
                             </span>
                           )}
-                          {isMine && (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              Assigned to you
-                            </span>
-                          )}
                         </div>
                         
                         {task.description && (
@@ -347,10 +347,20 @@ const Tasks: React.FC = () => {
                         )}
                         
                         <div className="mt-3 flex items-center space-x-4 text-sm text-gray-500">
-                          {task.assigneeId && (
+                          {isMine ? (
                             <div className="flex items-center">
                               <UserIcon className="h-4 w-4 mr-1" />
-                              {task.assignee?.name || 'Unassigned'}
+                              Assigned to you
+                            </div>
+                          ) : task.assigneeId ? (
+                            <div className="flex items-center">
+                              <UserIcon className="h-4 w-4 mr-1" />
+                              {task.assignee?.name || 'Unknown'}
+                            </div>
+                          ) : (
+                            <div className="flex items-center">
+                              <UserIcon className="h-4 w-4 mr-1" />
+                              Unassigned
                             </div>
                           )}
                           

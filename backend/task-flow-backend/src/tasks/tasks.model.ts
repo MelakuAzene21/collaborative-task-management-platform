@@ -1,6 +1,22 @@
 import { Field, InputType, Int, ObjectType } from '@nestjs/graphql';
 import { TaskStatus, Priority } from '../common/types';
+import { ProjectBasic } from '../teams/teams.model';
 import '../common/enums.graphql'; // Register enums with GraphQL
+
+@ObjectType()
+export class UserBasic {
+  @Field(() => String)
+  id: string;
+
+  @Field(() => String)
+  name: string;
+
+  @Field(() => String)
+  email: string;
+
+  @Field(() => String)
+  role: string;
+}
 
 @ObjectType()
 export class Task {
@@ -27,6 +43,12 @@ export class Task {
 
   @Field(() => String)
   projectId: string;
+
+  @Field(() => UserBasic, { nullable: true })
+  assignee?: UserBasic;
+
+  @Field(() => ProjectBasic, { nullable: true })
+  project?: ProjectBasic;
 }
 
 @InputType()

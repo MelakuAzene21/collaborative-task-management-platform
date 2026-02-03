@@ -35,7 +35,18 @@ export class TaskResolver {
       priority: task.priority as any,
       dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : undefined,
       assigneeId: task.assigneeId || undefined,
-      projectId: task.projectId
+      projectId: task.projectId,
+      assignee: task.assignee ? {
+        id: task.assignee.id,
+        name: task.assignee.name,
+        email: task.assignee.email,
+        role: task.assignee.role
+      } : undefined,
+      project: task.project ? {
+        id: task.project.id,
+        name: task.project.name,
+        teamId: task.project.teamId
+      } : undefined
     }));
   }
 
