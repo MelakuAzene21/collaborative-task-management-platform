@@ -1,13 +1,45 @@
-import React from 'react';
-import { Bars3Icon } from '@heroicons/react/24/outline';
-import { useAppSelector } from '../hooks';
+import React, { useState, useEffect, useRef } from 'react';
+import { UserIcon, ArrowRightOnRectangleIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { useAppSelector, useAuth } from '../hooks';
+import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
-  onToggleSidebar: () => void;
+  onToggleSidebar?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
+const Header: React.FC<HeaderProps> = ({ }) => {
   const user = useAppSelector((state) => state.auth.user);
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleProfile = () => {
+    navigate('/profile');
+    setShowUserMenu(false);
+  };
+
+  const handleSettings = () => {
+    navigate('/settings');
+    setShowUserMenu(false);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setShowUserMenu(false);
+  };
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -15,13 +47,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
         <div className="flex items-center justify-between h-16">
           {/* Left side */}
           <div className="flex items-center">
-            <button
-              onClick={onToggleSidebar}
-              className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 lg:hidden"
-            >
-              <Bars3Icon className="h-6 w-6" />
-            </button>
-            <div className="ml-4 lg:ml-0">
+            <div className="ml-4">
               <h2 className="text-lg font-semibold text-gray-900">
                 Welcome back, {user?.name}
               </h2>
@@ -38,14 +64,54 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             </button>
 
             {/* User menu */}
-            <div className="flex items-center space-x-3">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                <p className="text-xs text-gray-500">{user?.role}</p>
-              </div>
-              <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm font-medium">
-                {user?.name?.charAt(0).toUpperCase()}
-              </div>
+            <div className="relative" ref={userMenuRef}>
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center space-x-3 p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition-colors"
+              >
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                  <p className="text-xs text-gray-500">{user?.role}</p>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm font-medium">
+                  {user?.name?.charAt(0).toUpperCase()}
+                </div>
+              </button>
+
+              {/* Dropdown menu */}
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                  <div className="py-1">
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                      <p className="text-xs text-gray-500">{user?.email}</p>
+                    </div>
+                    <button
+                      onClick={handleProfile}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <UserIcon className="h-4 w-4 mr-3 text-gray-400" />
+                      Profile
+                    </button>
+                    <button
+                      onClick={handleSettings}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <Cog6ToothIcon className="h-4 w-4 mr-3 text-gray-400" />
+                      Settings
+                    </button>
+                    <div className="border-t border-gray-100">
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                      >
+                        <ArrowRightOnRectangleIcon className="h-4 w-4 mr-3 text-red-400" />
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
