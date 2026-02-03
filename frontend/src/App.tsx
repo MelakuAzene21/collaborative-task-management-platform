@@ -15,6 +15,7 @@ import Profile from './features/profile/Profile';
 import TeamManagement from './features/teams/TeamManagement';
 import Projects from './features/projects/Projects';
 import Tasks from './features/tasks/Tasks';
+import Calendar from './features/calendar/Calendar';
 import { useAuth } from './hooks';
 
 // Protected Route Component
@@ -65,7 +66,7 @@ const AppRoutes: React.FC = () => {
         <Route path="profile" element={<Profile />} />
         <Route path="projects" element={<Projects />} />
         <Route path="tasks" element={<Tasks />} />
-        <Route path="calendar" element={<div>Calendar Page - Coming Soon</div>} />
+        <Route path="calendar" element={<Calendar />} />
         <Route path="settings" element={<div>Settings Page - Coming Soon</div>} />
       </Route>
 
