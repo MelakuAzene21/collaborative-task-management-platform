@@ -32,7 +32,7 @@ import { User, Team, TeamMember, Project, Task, Comment } from './entities';
       driver: ApolloDriver,
       autoSchemaFile: true,
       installSubscriptionHandlers: true,
-      context: ({ req }) => ({ req }),
+      context: ({ req, res }) => ({ req, res }),
     }),
     AuthModule,
     UsersModule,

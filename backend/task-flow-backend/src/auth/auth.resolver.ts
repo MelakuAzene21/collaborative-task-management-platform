@@ -1,19 +1,46 @@
-import { Resolver, Mutation, Args } from '@nestjs/graphql';
+import { Resolver, Mutation, Args, Context } from '@nestjs/graphql';
 import { AuthService } from './auth.service';
 import { LoginInput, LoginResponse, RegisterInput } from './auth.model';
+import { Response } from 'express';
 
 @Resolver()
 export class AuthResolver {
   constructor(private authService: AuthService) {}
 
   @Mutation(() => LoginResponse)
-  async login(@Args('input') input: LoginInput) {
-    return this.authService.login(input.email, input.password);
+  async login(@Args('input') input: LoginInput, @Context() context: { res: Response }) {
+    const result = await this.authService.login(input.email, input.password);
+    
+    // Set HTTP-only cookie
+    context.res.cookie('token', result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+    
+    return result;
   }
 
   @Mutation(() => LoginResponse)
-  async register(@Args('input') input: RegisterInput) {
-    return this.authService.register(input.email, input.password, input.name);
+  async register(@Args('input') input: RegisterInput, @Context() context: { res: Response }) {
+    const result = await this.authService.register(input.email, input.password, input.name);
+    
+    // Set HTTP-only cookie
+    context.res.cookie('token', result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+    
+    return result;
+  }
+
+  @Mutation(() => String)
+  async logout(@Context() context: { res: Response }) {
+    context.res.clearCookie('token');
+    return 'Logged out successfully';
   }
 
   @Mutation(() => String)

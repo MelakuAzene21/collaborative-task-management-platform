@@ -7,7 +7,10 @@ dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+  app.enableCors({
+    origin: 'http://localhost:5173', // Vite dev server
+    credentials: true,
+  });
   await app.listen(4000);
 }
 bootstrap();
