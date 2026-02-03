@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Task, TaskStatus, Priority } from '../entities/task.entity';
 import { Project } from '../entities/project.entity';
 import { User } from '../entities/user.entity';
-import { Task as TaskModel, CreateTaskInput } from './tasks.model';
+import { Task as TaskModel, CreateTaskInput, UpdateTaskInput } from './tasks.model';
 
 @Resolver(() => TaskModel)
 export class TaskResolver {
@@ -75,6 +75,39 @@ export class TaskResolver {
       task.assigneeId = input.assigneeId;
     }
     task.projectId = input.projectId;
+
+    const savedTask = await this.taskRepository.save(task);
+
+    return {
+      id: savedTask.id,
+      title: savedTask.title,
+      description: savedTask.description || undefined,
+      status: savedTask.status as any,
+      priority: savedTask.priority as any,
+      dueDate: savedTask.dueDate ? savedTask.dueDate.toISOString() : undefined,
+      assigneeId: savedTask.assigneeId || undefined,
+      projectId: savedTask.projectId
+    };
+  }
+
+  @Mutation(() => TaskModel)
+  async updateTask(@Args('id') id: string, @Args('input') input: UpdateTaskInput): Promise<TaskModel> {
+    const task = await this.taskRepository.findOne({ where: { id } });
+    
+    if (!task) {
+      throw new Error('Task not found');
+    }
+
+    // Update fields
+    if (input.title !== undefined) task.title = input.title;
+    if (input.description !== undefined) task.description = input.description;
+    if (input.status !== undefined) task.status = input.status;
+    if (input.priority !== undefined) task.priority = input.priority;
+    if (input.dueDate !== undefined) {
+      task.dueDate = input.dueDate ? new Date(input.dueDate) : null;
+    }
+    if (input.assigneeId !== undefined) task.assigneeId = input.assigneeId;
+    if (input.projectId !== undefined) task.projectId = input.projectId;
 
     const savedTask = await this.taskRepository.save(task);
 

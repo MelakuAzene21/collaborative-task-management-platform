@@ -52,3 +52,27 @@ export class CreateTaskInput {
   @Field(() => String)
   projectId: string;
 }
+
+@InputType()
+export class UpdateTaskInput {
+  @Field(() => String, { nullable: true })
+  title?: string;
+
+  @Field(() => String, { nullable: true })
+  description?: string;
+
+  @Field(() => TaskStatus, { nullable: true })
+  status?: TaskStatus;
+
+  @Field(() => Priority, { nullable: true })
+  priority?: Priority;
+
+  @Field(() => String, { nullable: true })
+  dueDate?: string;
+
+  @Field(() => String, { nullable: true })
+  assigneeId?: string;
+
+  @Field(() => String, { nullable: true })
+  projectId?: string;
+}

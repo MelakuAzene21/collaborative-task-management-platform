@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
-import { GET_TASKS, CREATE_TASK, GET_PROJECTS } from '../../api/queries';
+import { GET_TASKS, CREATE_TASK, GET_PROJECTS, GET_USERS, UPDATE_TASK } from '../../api/queries';
 import { useAuth, useNotifications } from '../../hooks';
 import { 
   CheckCircleIcon,
@@ -53,12 +53,14 @@ const Tasks: React.FC = () => {
   const { data: tasksData, loading, refetch } = useQuery(GET_TASKS, {
     variables: { projectId: selectedProject || 'all' },
   });
-
   const { data: projectsData } = useQuery(GET_PROJECTS);
+  const { data: usersData } = useQuery(GET_USERS);
   const [createTaskMutation] = useMutation(CREATE_TASK);
+  const [updateTaskMutation] = useMutation(UPDATE_TASK);
 
   const tasks = tasksData?.tasks || [];
   const projects = projectsData?.projects || [];
+  const users = usersData?.users || [];
 
   // Role-based permissions
   const isAdmin = user?.role === 'ADMIN';
@@ -81,13 +83,32 @@ const Tasks: React.FC = () => {
         title: '', 
         description: '', 
         projectId: '', 
-        assigneeId: '', 
+        assigneeId: '',
         priority: 'MEDIUM', 
         dueDate: '' 
       });
       refetch();
     } catch (error) {
       addNotification('Failed to create task', 'error');
+    }
+  };
+
+  const handleAssignTask = async (taskId: string, assigneeId: string) => {
+    try {
+      await updateTaskMutation({
+        variables: { 
+          id: taskId, 
+          input: { assigneeId: assigneeId || null } 
+        },
+      });
+      
+      addNotification(
+        assigneeId ? 'Task assigned successfully!' : 'Task unassigned successfully!',
+        'success'
+      );
+      refetch();
+    } catch (error) {
+      addNotification('Failed to update task assignment', 'error');
     }
   };
 
@@ -295,14 +316,25 @@ const Tasks: React.FC = () => {
                   <div key={task.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <h4 className="text-lg font-medium text-gray-900">{task.title}</h4>
+                        <h4 className="text-lg font-medium text-gray-900 mb-2">{task.title}</h4>
+                        <div className="flex flex-wrap gap-2 mb-2">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
                             {task.status}
                           </span>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
                             {task.priority}
                           </span>
+                          {task.assigneeId ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              <UserIcon className="h-3 w-3 mr-1" />
+                              Assigned to {task.assignee?.name || 'Unknown'}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              <UserIcon className="h-3 w-3 mr-1" />
+                              Unassigned
+                            </span>
+                          )}
                           {isMine && (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                               Assigned to you
@@ -339,6 +371,23 @@ const Tasks: React.FC = () => {
                           <button className="p-2 text-gray-400 hover:text-red-600">
                             <TrashIcon className="h-4 w-4" />
                           </button>
+                          <div className="relative">
+                            <select
+                              className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                              value={task.assigneeId || ''}
+                              onChange={(e) => handleAssignTask(task.id, e.target.value)}
+                            >
+                              <option value="">Assign...</option>
+                              <option value="">Unassigned</option>
+                              {users
+                                .filter((user: any) => user.role === 'MEMBER' || user.role === 'LEAD')
+                                .map((user: any) => (
+                                  <option key={user.id} value={user.id}>
+                                    {user.name}
+                                  </option>
+                                ))}
+                            </select>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -409,6 +458,27 @@ const Tasks: React.FC = () => {
                         {projects.map((project: any) => (
                           <option key={project.id} value={project.id}>{project.name}</option>
                         ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="taskAssignee" className="block text-sm font-medium text-gray-700">
+                        Assign to (optional)
+                      </label>
+                      <select
+                        id="taskAssignee"
+                        className="mt-1 input"
+                        value={taskForm.assigneeId}
+                        onChange={(e) => setTaskForm(prev => ({ ...prev, assigneeId: e.target.value }))}
+                      >
+                        <option value="">Unassigned</option>
+                        {users
+                          .filter((user: any) => user.role === 'MEMBER' || user.role === 'LEAD')
+                          .map((user: any) => (
+                            <option key={user.id} value={user.id}>
+                              {user.name} ({user.role})
+                            </option>
+                          ))}
                       </select>
                     </div>
 

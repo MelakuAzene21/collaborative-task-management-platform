@@ -314,6 +314,30 @@ export const CREATE_TASK = gql`
   }
 `;
 
+export const UPDATE_TASK = gql`
+  mutation UpdateTask($id: String!, $input: UpdateTaskInput!) {
+    updateTask(id: $id, input: $input) {
+      id
+      title
+      description
+      status
+      priority
+      dueDate
+      assigneeId
+      projectId
+      project {
+        id
+        name
+      }
+      assignee {
+        id
+        name
+        email
+      }
+    }
+  }
+`;
+
 export const GET_COMMENTS = gql`
   query GetComments($taskId: String!) {
     comments(taskId: $taskId) {
