@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
-import { GET_TEAMS, CREATE_TEAM, ADD_TO_TEAM } from '../../api/queries';
+import { GET_TEAMS, CREATE_TEAM, ADD_TO_TEAM, GET_USERS } from '../../api/queries';
 import { useAuth, useNotifications } from '../../hooks';
 import { 
   UsersIcon,
@@ -16,8 +16,8 @@ interface TeamFormData {
   description: string;
 }
 
-interface InviteFormData {
-  email: string;
+interface AddMemberFormData {
+  userId: string;
   teamId: string;
   role: 'LEAD' | 'MEMBER';
 }
@@ -26,7 +26,7 @@ const TeamManagement: React.FC = () => {
   const { user } = useAuth();
   const { addNotification } = useNotifications();
   const [showCreateTeam, setShowCreateTeam] = useState(false);
-  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   
   const [teamForm, setTeamForm] = useState<TeamFormData>({
@@ -34,17 +34,19 @@ const TeamManagement: React.FC = () => {
     description: '',
   });
   
-  const [inviteForm, setInviteForm] = useState<InviteFormData>({
-    email: '',
+  const [addMemberForm, setAddMemberForm] = useState<AddMemberFormData>({
+    userId: '',
     teamId: '',
     role: 'MEMBER',
   });
 
   const { data: teamsData, loading, refetch } = useQuery(GET_TEAMS);
+  const { data: usersData } = useQuery(GET_USERS);
   const [createTeamMutation] = useMutation(CREATE_TEAM);
   const [addToTeamMutation] = useMutation(ADD_TO_TEAM);
 
   const teams = teamsData?.teams || [];
+  const users = usersData?.users || [];
 
   const isAdmin = user?.role === 'ADMIN';
   const isLead = user?.role === 'LEAD' || teams.some((team: any) => 
@@ -72,23 +74,23 @@ const TeamManagement: React.FC = () => {
     }
   };
 
-  const handleInviteUser = async (e: React.FormEvent) => {
+  const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
       await addToTeamMutation({
         variables: {
-          userId: inviteForm.email, // This would need to be updated to find user by email
-          teamId: inviteForm.teamId,
+          userId: addMemberForm.userId,
+          teamId: addMemberForm.teamId,
         },
       });
       
-      addNotification('User invited successfully!', 'success');
-      setShowInviteModal(false);
-      setInviteForm({ email: '', teamId: '', role: 'MEMBER' });
+      addNotification('Member added successfully!', 'success');
+      setShowAddMemberModal(false);
+      setAddMemberForm({ userId: '', teamId: '', role: 'MEMBER' });
       refetch();
     } catch (error) {
-      addNotification('Failed to invite user', 'error');
+      addNotification('Failed to add member', 'error');
     }
   };
 
@@ -191,13 +193,13 @@ const TeamManagement: React.FC = () => {
                     <button
                       onClick={() => {
                         setSelectedTeam(team.id);
-                        setShowInviteModal(true);
-                        setInviteForm(prev => ({ ...prev, teamId: team.id }));
+                        setShowAddMemberModal(true);
+                        setAddMemberForm(prev => ({ ...prev, teamId: team.id }));
                       }}
                       className="flex-1 btn btn-secondary btn-sm"
                     >
                       <UserPlusIcon className="h-4 w-4 mr-1" />
-                      Invite
+                      Add Members
                     </button>
                   </div>
                 )}
@@ -293,35 +295,47 @@ const TeamManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Invite User Modal */}
-      {showInviteModal && (
+      {/* Add Member Modal */}
+      {showAddMemberModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" onClick={() => setShowInviteModal(false)}>
+            <div className="fixed inset-0 transition-opacity" onClick={() => setShowAddMemberModal(false)}>
               <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
             </div>
 
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <form onSubmit={handleInviteUser}>
+              <form onSubmit={handleAddMember}>
                 <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <div className="mb-4">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900">Invite Team Member</h3>
-                    <p className="mt-1 text-sm text-gray-500">Invite a new member to join your team.</p>
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">Add Team Member</h3>
+                    <p className="mt-1 text-sm text-gray-500">Add an existing user to this team.</p>
                   </div>
                   
                   <div className="space-y-4">
                     <div>
-                      <label htmlFor="inviteEmail" className="block text-sm font-medium text-gray-700">
-                        Email Address
+                      <label htmlFor="userSelect" className="block text-sm font-medium text-gray-700">
+                        Select User
                       </label>
-                      <input
-                        id="inviteEmail"
-                        type="email"
+                      <select
+                        id="userSelect"
                         className="mt-1 input"
-                        value={inviteForm.email}
-                        onChange={(e) => setInviteForm(prev => ({ ...prev, email: e.target.value }))}
+                        value={addMemberForm.userId}
+                        onChange={(e) => setAddMemberForm(prev => ({ ...prev, userId: e.target.value }))}
                         required
-                      />
+                      >
+                        <option value="">Choose a user to add</option>
+                        {users
+                          .filter((user: any) => {
+                            // Filter out users who are already in this team
+                            const team = teams.find((t: any) => t.id === addMemberForm.teamId);
+                            return !team?.members?.some((member: any) => member.userId === user.id);
+                          })
+                          .map((user: any) => (
+                            <option key={user.id} value={user.id}>
+                              {user.name} ({user.email}) - {user.role}
+                            </option>
+                          ))}
+                      </select>
                     </div>
                     
                     <div>
@@ -331,8 +345,8 @@ const TeamManagement: React.FC = () => {
                       <select
                         id="teamSelect"
                         className="mt-1 input"
-                        value={inviteForm.teamId}
-                        onChange={(e) => setInviteForm(prev => ({ ...prev, teamId: e.target.value }))}
+                        value={addMemberForm.teamId}
+                        onChange={(e) => setAddMemberForm(prev => ({ ...prev, teamId: e.target.value }))}
                         required
                       >
                         <option value="">Select a team</option>
@@ -349,8 +363,8 @@ const TeamManagement: React.FC = () => {
                       <select
                         id="roleSelect"
                         className="mt-1 input"
-                        value={inviteForm.role}
-                        onChange={(e) => setInviteForm(prev => ({ ...prev, role: e.target.role as 'LEAD' | 'MEMBER' }))}
+                        value={addMemberForm.role}
+                        onChange={(e) => setAddMemberForm(prev => ({ ...prev, role: e.target.role as 'LEAD' | 'MEMBER' }))}
                       >
                         <option value="MEMBER">Member</option>
                         {isAdmin && <option value="LEAD">Team Lead</option>}
@@ -364,12 +378,12 @@ const TeamManagement: React.FC = () => {
                     type="submit"
                     className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:ml-3 sm:w-auto sm:text-sm"
                   >
-                    Send Invitation
+                    Add Member
                   </button>
                   <button
                     type="button"
                     className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                    onClick={() => setShowInviteModal(false)}
+                    onClick={() => setShowAddMemberModal(false)}
                   >
                     Cancel
                   </button>
