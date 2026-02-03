@@ -12,7 +12,6 @@ import Login from './features/auth/Login';
 import Register from './features/auth/Register';
 import Teams from './features/teams/Teams';
 import Profile from './features/profile/Profile';
-import TeamManagement from './features/teams/TeamManagement';
 import Projects from './features/projects/Projects';
 import Tasks from './features/tasks/Tasks';
 import Calendar from './features/calendar/Calendar';
@@ -62,7 +61,6 @@ const AppRoutes: React.FC = () => {
       >
         <Route index element={<Dashboard />} />
         <Route path="teams" element={<Teams />} />
-        <Route path="team-management" element={<TeamManagement />} />
         <Route path="profile" element={<Profile />} />
         <Route path="projects" element={<Projects />} />
         <Route path="tasks" element={<Tasks />} />
