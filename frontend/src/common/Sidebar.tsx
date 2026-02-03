@@ -5,7 +5,6 @@ import {
   FolderIcon,
   UsersIcon,
   CalendarIcon,
-  Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
@@ -21,7 +20,6 @@ const Sidebar: React.FC = () => {
     { name: 'Tasks', href: '/tasks', icon: CheckCircleIcon },
     { name: 'Teams', href: '/teams', icon: UsersIcon },
     { name: 'Calendar', href: '/calendar', icon: CalendarIcon },
-    { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
   ];
 
   const isActive = (href: string) => {

@@ -65,7 +65,6 @@ const AppRoutes: React.FC = () => {
         <Route path="projects" element={<Projects />} />
         <Route path="tasks" element={<Tasks />} />
         <Route path="calendar" element={<Calendar />} />
-        <Route path="settings" element={<div>Settings Page - Coming Soon</div>} />
       </Route>
 
       {/* Catch all route */}

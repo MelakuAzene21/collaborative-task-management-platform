@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserIcon, ArrowRightOnRectangleIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { UserIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import { useAppSelector, useAuth } from '../hooks';
 import { useNavigate } from 'react-router-dom';
 
@@ -28,11 +28,6 @@ const Header: React.FC<HeaderProps> = ({ }) => {
 
   const handleProfile = () => {
     navigate('/profile');
-    setShowUserMenu(false);
-  };
-
-  const handleSettings = () => {
-    navigate('/settings');
     setShowUserMenu(false);
   };
 
@@ -92,13 +87,6 @@ const Header: React.FC<HeaderProps> = ({ }) => {
                     >
                       <UserIcon className="h-4 w-4 mr-3 text-gray-400" />
                       Profile
-                    </button>
-                    <button
-                      onClick={handleSettings}
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      <Cog6ToothIcon className="h-4 w-4 mr-3 text-gray-400" />
-                      Settings
                     </button>
                     <div className="border-t border-gray-100">
                       <button
