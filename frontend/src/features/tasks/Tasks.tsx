@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
-import { GET_TASKS, CREATE_TASK, GET_PROJECTS, GET_USERS, UPDATE_TASK, CREATE_COMMENT, DELETE_TASK } from '../../api/queries';
+import { GET_TASKS, CREATE_TASK, GET_PROJECTS, GET_USERS, UPDATE_TASK, CREATE_COMMENT, DELETE_TASK, GET_COMMENTS } from '../../api/queries';
 import { useAuth, useNotifications } from '../../hooks';
 import { 
   CheckCircleIcon,
@@ -39,6 +39,13 @@ const Tasks: React.FC = () => {
   const [newComment, setNewComment] = useState('');
   const [mentionedUsers, setMentionedUsers] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
+
+  // Fetch comments when task is selected
+  const { data: commentsData, refetch: refetchComments } = useQuery(GET_COMMENTS, {
+    variables: { taskId: selectedTask?.id || '' },
+    skip: !selectedTask?.id,
+    fetchPolicy: 'network-only', // Always fetch fresh data
+  });
   
   // Read projectId from URL parameters on component mount
   useEffect(() => {
@@ -49,6 +56,21 @@ const Tasks: React.FC = () => {
       setTaskForm(prev => ({ ...prev, projectId }));
     }
   }, []);
+
+  // Real-time comment updates when task details modal is open
+  useEffect(() => {
+    if (showTaskDetails && selectedTask) {
+      // Initial refetch
+      refetchComments();
+      
+      // Set up polling for real-time updates (every 5 seconds)
+      const interval = setInterval(() => {
+        refetchComments();
+      }, 5000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [showTaskDetails, selectedTask, refetchComments]);
 
   const [taskForm, setTaskForm] = useState<TaskFormData>({
     title: '',
@@ -176,6 +198,7 @@ const Tasks: React.FC = () => {
       setNewComment('');
       setMentionedUsers([]);
       refetch();
+      refetchComments(); // Refetch comments to show new one
     } catch (error: any) {
       console.error('Comment error:', error);
       addNotification(`Failed to add comment: ${error.message || 'Unknown error'}`, 'error');
@@ -212,6 +235,35 @@ const Tasks: React.FC = () => {
     } catch (error) {
       addNotification('Failed to delete task', 'error');
     }
+  };
+
+  // Filter comments based on user role and mentions
+  const getFilteredComments = () => {
+    const comments = commentsData?.comments || [];
+    
+    // Admin and Lead can see all comments
+    if (canManageTasks) {
+      return comments;
+    }
+    
+    // Members can see comments they authored or where they were mentioned
+    return comments.filter((comment: any) => {
+      const isAuthor = comment.authorId === user?.id;
+      const isMentioned = comment.content.includes(`@${user?.name}`) || 
+                         comment.content.includes(`@${user?.email}`);
+      return isAuthor || isMentioned;
+    });
+  };
+
+  // Check if user is mentioned in a comment
+  const isUserMentioned = (content: string) => {
+    return content.includes(`@${user?.name}`) || content.includes(`@${user?.email}`);
+  };
+
+  // Get mentioned users from comment content
+  const getMentionedUsers = (content: string) => {
+    const mentions = content.match(/@(\w+)/g) || [];
+    return mentions.map(mention => mention.slice(1));
   };
 
   const canManageTask = (task: any) => {
@@ -789,10 +841,46 @@ const Tasks: React.FC = () => {
               
               {/* Comments List */}
               <div className="space-y-3 mt-4">
-                {/* Placeholder for existing comments - would need to fetch and display them */}
-                <div className="text-center py-4 text-gray-500 text-sm">
-                  No comments yet. Be the first to comment!
-                </div>
+                {getFilteredComments().length === 0 ? (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    {canManageTasks 
+                      ? 'No comments yet. Be the first to comment!' 
+                      : 'No comments visible. Only comments you authored or were mentioned in will appear here.'}
+                  </div>
+                ) : (
+                  getFilteredComments().map((comment: any) => (
+                    <div key={comment.id} className="bg-gray-50 rounded-lg p-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <div className="h-6 w-6 rounded-full bg-primary-600 flex items-center justify-center text-white text-xs font-medium">
+                              {comment.author?.name?.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">
+                              {comment.author?.name}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {new Date(comment.createdAt).toLocaleString()}
+                            </span>
+                            {isUserMentioned(comment.content) && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                You were mentioned
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                            {comment.content}
+                          </div>
+                          {getMentionedUsers(comment.content).length > 0 && (
+                            <div className="mt-2 text-xs text-gray-500">
+                              Mentioned: {getMentionedUsers(comment.content).join(', ')}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
