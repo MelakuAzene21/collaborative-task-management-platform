@@ -403,3 +403,12 @@ export const CREATE_COMMENT = gql`
     }
   }
 `;
+
+export const DELETE_TASK = gql`
+  mutation DeleteTask($id: String!) {
+    deleteTask(id: $id) {
+      id
+      title
+    }
+  }
+`;

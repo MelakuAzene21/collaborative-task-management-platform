@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
-import { GET_TASKS, CREATE_TASK, GET_PROJECTS, GET_USERS, UPDATE_TASK } from '../../api/queries';
+import { GET_TASKS, CREATE_TASK, GET_PROJECTS, GET_USERS, UPDATE_TASK, CREATE_COMMENT, DELETE_TASK } from '../../api/queries';
 import { useAuth, useNotifications } from '../../hooks';
 import { 
   CheckCircleIcon,
@@ -10,7 +10,11 @@ import {
   PencilIcon,
   TrashIcon,
   UserIcon,
-  CalendarIcon
+  CalendarIcon,
+  ChatBubbleLeftIcon,
+  PaperClipIcon,
+  PlayIcon,
+  CheckIcon
 } from '@heroicons/react/24/outline';
 import { formatDate, getStatusColor, getPriorityColor } from '../../utils/helpers';
 
@@ -30,6 +34,11 @@ const Tasks: React.FC = () => {
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [filterPriority, setFilterPriority] = useState<string>('ALL');
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [showTaskDetails, setShowTaskDetails] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [mentionedUsers, setMentionedUsers] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<File[]>([]);
   
   // Read projectId from URL parameters on component mount
   useEffect(() => {
@@ -57,6 +66,8 @@ const Tasks: React.FC = () => {
   const { data: usersData } = useQuery(GET_USERS);
   const [createTaskMutation] = useMutation(CREATE_TASK);
   const [updateTaskMutation] = useMutation(UPDATE_TASK);
+  const [createCommentMutation] = useMutation(CREATE_COMMENT);
+  const [deleteTaskMutation] = useMutation(DELETE_TASK);
 
   const tasks = tasksData?.tasks || [];
   const projects = projectsData?.projects || [];
@@ -109,6 +120,97 @@ const Tasks: React.FC = () => {
       refetch();
     } catch (error) {
       addNotification('Failed to update task assignment', 'error');
+    }
+  };
+
+  const handleUpdateTaskStatus = async (taskId: string, status: string) => {
+    try {
+      await updateTaskMutation({
+        variables: { 
+          id: taskId, 
+          input: { status } 
+        },
+      });
+      
+      addNotification('Task status updated successfully!', 'success');
+      refetch();
+    } catch (error) {
+      addNotification('Failed to update task status', 'error');
+    }
+  };
+
+  const handleOpenTaskDetails = (task: any) => {
+    setSelectedTask(task);
+    setShowTaskDetails(true);
+  };
+
+  const handleCloseTaskDetails = () => {
+    setSelectedTask(null);
+    setShowTaskDetails(false);
+    setNewComment('');
+    setMentionedUsers([]);
+    setAttachments([]);
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !selectedTask) return;
+
+    try {
+      console.log('Adding comment:', {
+        content: newComment,
+        taskId: selectedTask.id,
+        authorId: user?.id
+      });
+
+      await createCommentMutation({
+        variables: {
+          input: {
+            content: newComment,
+            taskId: selectedTask.id,
+            authorId: user?.id,
+          }
+        }
+      });
+
+      addNotification('Comment added successfully!', 'success');
+      setNewComment('');
+      setMentionedUsers([]);
+      refetch();
+    } catch (error: any) {
+      console.error('Comment error:', error);
+      addNotification(`Failed to add comment: ${error.message || 'Unknown error'}`, 'error');
+    }
+  };
+
+  const handleCommentChange = (value: string) => {
+    setNewComment(value);
+    
+    // Extract @mentions from comment
+    const mentions = value.match(/@(\w+)/g)?.map(mention => mention.slice(1)) || [];
+    setMentionedUsers(mentions);
+  };
+
+  const handleFileAttachment = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setAttachments(prev => [...prev, ...files]);
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (!confirm('Are you sure you want to delete this task?')) return;
+    
+    try {
+      await deleteTaskMutation({
+        variables: { id: taskId }
+      });
+      
+      addNotification('Task deleted successfully!', 'success');
+      refetch();
+    } catch (error) {
+      addNotification('Failed to delete task', 'error');
     }
   };
 
@@ -378,7 +480,7 @@ const Tasks: React.FC = () => {
                           <button className="p-2 text-gray-400 hover:text-gray-600">
                             <PencilIcon className="h-4 w-4" />
                           </button>
-                          <button className="p-2 text-gray-400 hover:text-red-600">
+                          <button className="p-2 text-gray-400 hover:text-red-600" onClick={() => handleDeleteTask(task.id)}>
                             <TrashIcon className="h-4 w-4" />
                           </button>
                           <div className="relative">
@@ -398,6 +500,39 @@ const Tasks: React.FC = () => {
                                 ))}
                             </select>
                           </div>
+                        </div>
+                      )}
+
+                      {/* Status update buttons for assigned members */}
+                      {isMine && (
+                        <div className="flex flex-col space-y-1 ml-4">
+                          <div className="flex space-x-1">
+                            {task.status === 'TODO' && (
+                              <button
+                                onClick={() => handleUpdateTaskStatus(task.id, 'IN_PROGRESS')}
+                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded hover:bg-blue-200"
+                              >
+                                <PlayIcon className="h-3 w-3 mr-1" />
+                                Start
+                              </button>
+                            )}
+                            {task.status === 'IN_PROGRESS' && (
+                              <button
+                                onClick={() => handleUpdateTaskStatus(task.id, 'DONE')}
+                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200"
+                              >
+                                <CheckIcon className="h-3 w-3 mr-1" />
+                                Complete
+                              </button>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleOpenTaskDetails(task)}
+                            className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200"
+                          >
+                            <ChatBubbleLeftIcon className="h-3 w-3 mr-1" />
+                            Details
+                          </button>
                         </div>
                       )}
                     </div>
@@ -539,6 +674,126 @@ const Tasks: React.FC = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Task Details Modal */}
+      {showTaskDetails && selectedTask && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white px-4 py-5 sm:px-6 sm:flex sm:flex-row-reverse">
+              <button
+                type="button"
+                className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                onClick={handleCloseTaskDetails}
+              >
+                Close
+              </button>
+              <div className="flex-1">
+                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                  {selectedTask.title}
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Status: <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedTask.status)}`}>
+                    {selectedTask.status}
+                  </span>
+                </p>
+              </div>
+            </div>
+            
+            <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
+              <div className="space-y-4">
+                {selectedTask.description && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Description</h4>
+                    <p className="text-sm text-gray-600">{selectedTask.description}</p>
+                  </div>
+                )}
+                
+                <div className="flex items-center space-x-4 text-sm text-gray-500">
+                  <span>Priority: {selectedTask.priority}</span>
+                  {selectedTask.dueDate && (
+                    <span>Due: {formatDate(selectedTask.dueDate)}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Comments Section */}
+            <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
+              <h4 className="text-sm font-medium text-gray-900 mb-4">Comments</h4>
+              
+              {/* Add Comment */}
+              <div className="mb-4">
+                <div className="space-y-3">
+                  <div>
+                    <textarea
+                      rows={3}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Add a comment... (Use @ to mention users)"
+                      value={newComment}
+                      onChange={(e) => handleCommentChange(e.target.value)}
+                    />
+                  </div>
+                  
+                  {/* File Attachments - Temporarily disabled */}
+                  <div className="flex items-center space-x-2">
+                    {/* <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={handleFileAttachment}
+                      />
+                      <div className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                        <PaperClipIcon className="h-4 w-4 mr-2" />
+                        Attach Files
+                      </div>
+                    </label> */}
+                    
+                    <button
+                      onClick={handleAddComment}
+                      className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:text-sm"
+                    >
+                      Post Comment
+                    </button>
+                  </div>
+                  
+                  {/* Show attached files - Temporarily disabled */}
+                  {/* {attachments.length > 0 && (
+                    <div className="space-y-2">
+                      {attachments.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+                          <span className="text-sm text-gray-600">{file.name}</span>
+                          <button
+                            onClick={() => removeAttachment(index)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )} */}
+                  
+                  {/* Show mentioned users */}
+                  {mentionedUsers.length > 0 && (
+                    <div className="text-sm text-gray-500">
+                      Mentioning: {mentionedUsers.join(', ')}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Comments List */}
+              <div className="space-y-3 mt-4">
+                {/* Placeholder for existing comments - would need to fetch and display them */}
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  No comments yet. Be the first to comment!
+                </div>
+              </div>
             </div>
           </div>
         </div>
