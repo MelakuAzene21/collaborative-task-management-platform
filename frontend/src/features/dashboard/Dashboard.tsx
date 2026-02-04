@@ -32,20 +32,25 @@ const Dashboard: React.FC = () => {
   if (projectsError || tasksError) return <ErrorDisplay message={projectsError?.message || tasksError?.message || 'Failed to load dashboard'} />;
 
   const projects = projectsData?.projects || [];
-  const tasks = tasksData?.tasks || [];
+  const allTasks = tasksData?.tasks || [];
 
-  // Calculate statistics
-  const totalTasks = tasks.length;
-  const completedTasks = tasks.filter((task: any) => task.status === 'DONE').length;
-  const inProgressTasks = tasks.filter((task: any) => task.status === 'IN_PROGRESS').length;
-  const todoTasks = tasks.filter((task: any) => task.status === 'TODO').length;
-  const overdueTasks = tasks.filter((task: any) => {
+  // Role-based filtering for tasks only (projects show all)
+  const filteredTasks = isMember
+    ? allTasks.filter((task: any) => task.assigneeId === user?.id)
+    : allTasks;
+
+  // Calculate statistics - use filtered tasks for stats, all projects for project count
+  const totalTasks = filteredTasks.length;
+  const completedTasks = filteredTasks.filter((task: any) => task.status === 'DONE').length;
+  const inProgressTasks = filteredTasks.filter((task: any) => task.status === 'IN_PROGRESS').length;
+  const todoTasks = filteredTasks.filter((task: any) => task.status === 'TODO').length;
+  const overdueTasks = filteredTasks.filter((task: any) => {
     if (!task.dueDate) return false;
     return new Date(task.dueDate) < new Date() && task.status !== 'DONE';
   }).length;
 
-  const recentProjects = projects.slice(0, 5);
-  const highPriorityTasks = tasks.filter((task: any) => task.priority === 'HIGH' && task.status !== 'DONE').slice(0, 5);
+  const recentProjects = projects.slice(0, 5); // Show all recent projects
+  const highPriorityTasks = filteredTasks.filter((task: any) => task.priority === 'HIGH' && task.status !== 'DONE').slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -92,7 +97,9 @@ const Dashboard: React.FC = () => {
                 <CheckCircleIcon className="h-8 w-8 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Completed Tasks</p>
+                <p className="text-sm font-medium text-gray-600">
+                  {isMember ? 'Your Completed Tasks' : 'Completed Tasks'}
+                </p>
                 <p className="text-2xl font-bold text-gray-900">{completedTasks}</p>
               </div>
             </div>
@@ -106,7 +113,9 @@ const Dashboard: React.FC = () => {
                 <ClockIcon className="h-8 w-8 text-yellow-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">In Progress</p>
+                <p className="text-sm font-medium text-gray-600">
+                  {isMember ? 'Your In Progress' : 'In Progress'}
+                </p>
                 <p className="text-2xl font-bold text-gray-900">{inProgressTasks}</p>
               </div>
             </div>
@@ -120,7 +129,9 @@ const Dashboard: React.FC = () => {
                 <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Overdue Tasks</p>
+                <p className="text-sm font-medium text-gray-600">
+                  {isMember ? 'Your Overdue Tasks' : 'Overdue Tasks'}
+                </p>
                 <p className="text-2xl font-bold text-gray-900">{overdueTasks}</p>
               </div>
             </div>
@@ -165,12 +176,16 @@ const Dashboard: React.FC = () => {
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">High Priority Tasks</h3>
-            <p className="card-description">Tasks that need your attention</p>
+            <p className="card-description">
+              {isMember ? 'Your high priority tasks that need attention' : 'High priority tasks that need attention'}
+            </p>
           </div>
           <div className="card-content">
             <div className="space-y-4">
               {highPriorityTasks.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No high priority tasks</p>
+                <p className="text-gray-500 text-center py-4">
+                  {isMember ? 'No high priority tasks assigned to you' : 'No high priority tasks'}
+                </p>
               ) : (
                 highPriorityTasks.map((task: any) => (
                   <div key={task.id} className="p-3 bg-gray-50 rounded-lg">
@@ -204,7 +219,9 @@ const Dashboard: React.FC = () => {
       <div className="card">
         <div className="card-header">
           <h3 className="card-title">Task Status Overview</h3>
-          <p className="card-description">Distribution of tasks by status</p>
+          <p className="card-description">
+            {isMember ? 'Your task distribution by status' : 'Distribution of tasks by status'}
+          </p>
         </div>
         <div className="card-content">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
